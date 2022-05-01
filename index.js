@@ -41,6 +41,30 @@ async function run() {
       // since this method returns the matched document, not a cursor, print it directly
       res.send(product);
     });
+
+
+    //update a qunatity in a product
+    app.put("/inventory/:id",async(req,res)=>{
+      const productId = req.params.id;
+      const newQty = req.body.upQty;
+     
+     if(productId && newQty){
+      const filter = { _id: ObjectId(productId) };
+      // this option instructs the method to create a document if no documents match the filter
+      const options = { upsert: true };
+      // create a document that sets the plot of the movie
+      const updateDoc = {
+        $set: {
+          quantity: newQty
+        },
+      };
+      const result = await items.updateOne(filter, updateDoc, options);
+
+
+      res.send(result);
+     }
+    });
+
   } finally {
   }
 }
