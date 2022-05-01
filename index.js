@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-require('dotenv').config()
+require("dotenv").config();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 
@@ -29,11 +29,18 @@ async function run() {
       // since this method returns the matched document, not a cursor, print it directly
       const products = await cursor.toArray();
       res.send(products);
-      console.log("items called");
+      
     });
+    
+    //get an specific product
+    app.get("/inventory/:id", async (req, res) => {
+      const productId = req.params.id;
 
-
-
+      const query = { _id: ObjectId(productId) };
+      const product = await items.findOne(query);
+      // since this method returns the matched document, not a cursor, print it directly
+      res.send(product);
+    });
   } finally {
   }
 }
