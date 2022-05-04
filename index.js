@@ -21,6 +21,34 @@ async function run() {
     await client.connect();
     const database = client.db("broomingDaleInventory");
     const items = database.collection("items");
+
+    // insert an item
+    app.post('/addproduct',async(req,res)=>{
+      const productName = req.body.data.productName;
+      const price = req.body.data.price;
+      const quantity = req.body.data.quantity;
+      const imgurl = req.body.data.imgurl;
+      const desc = req.body.data.desc;
+      const supplier = req.body.data.supplier;
+      const mail = req.body.data.mail;
+      if (productName && price && supplier && quantity){
+        const doc = {
+          productName:productName,
+          img:imgurl,
+          quantity:quantity,
+          price:price,
+          supplier: supplier,
+          description : desc,
+          mail:mail
+        }
+        const result = await items.insertOne(doc);
+        res.send(result);
+
+      }
+     
+
+    })
+
     // Query for a movie that has the title 'The Room'
 
     app.get("/items", async (req, res) => {
@@ -42,6 +70,17 @@ async function run() {
       // since this method returns the matched document, not a cursor, print it directly
       res.send(product);
     });
+
+    app.get("/myitems",async(req,res)=>{
+      const user = req.query.email;
+      const query = {mail:user};
+
+      const cursor = items.find(query);
+      // since this method returns the matched document, not a cursor, print it directly
+      const products = await cursor.toArray();
+      res.send(products);
+      
+    })
 
 
     //update a qunatity in a product
