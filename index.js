@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
@@ -23,7 +23,7 @@ async function run() {
     const items = database.collection("items");
 
     // insert an item
-    app.post('/addproduct',async(req,res)=>{
+    app.post("/addproduct", async (req, res) => {
       const productName = req.body.data.productName;
       const price = req.body.data.price;
       const quantity = req.body.data.quantity;
@@ -31,23 +31,20 @@ async function run() {
       const desc = req.body.data.desc;
       const supplier = req.body.data.supplier;
       const mail = req.body.data.mail;
-      if (productName && price && supplier && quantity){
+      if (productName && price && supplier && quantity) {
         const doc = {
-          productName:productName,
-          img:imgurl,
-          quantity:quantity,
-          price:price,
+          productName: productName,
+          img: imgurl,
+          quantity: quantity,
+          price: price,
           supplier: supplier,
-          description : desc,
-          mail:mail
-        }
+          description: desc,
+          mail: mail,
+        };
         const result = await items.insertOne(doc);
         res.send(result);
-
       }
-     
-
-    })
+    });
 
     // Query for a movie that has the title 'The Room'
 
@@ -58,9 +55,8 @@ async function run() {
       // since this method returns the matched document, not a cursor, print it directly
       const products = await cursor.toArray();
       res.send(products);
-      
     });
-    
+
     //get an specific product
     app.get("/inventory/:id", async (req, res) => {
       const productId = req.params.id;
@@ -71,50 +67,64 @@ async function run() {
       res.send(product);
     });
 
-    app.get("/myitems",async(req,res)=>{
-      const user = req.query.email;
-      const query = {mail:user};
-
-      const cursor = items.find(query);
-      // since this method returns the matched document, not a cursor, print it directly
-      const products = await cursor.toArray();
-      res.send(products);
-      
-    })
-
+    app.get("/myitems", async (req, res) => {
+      try {
+        const user = req.query.email;
+        const authorization = req.headers.authorization;
+        const query = { mail: user };
+        const [bearer, token] = authorization.split(" ");
+        var decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+        console.log("verifited", decoded)
+       
+        if (user === decoded.email) {
+          const cursor = items.find(query);
+          // since this method returns the matched document, not a cursor, print it directly
+          const products = await cursor.toArray();
+          res.send(products);
+        }
+      } catch (error) {
+        res.status(401).send("Unauthorized Access");
+      }
+    });
 
     //update a qunatity in a product
-    app.put("/inventory/:id",async(req,res)=>{
+    app.put("/inventory/:id", async (req, res) => {
       const productId = req.params.id;
       const newQty = req.body.upQty;
-     
-     if(productId && newQty){
-      const filter = { _id: ObjectId(productId) };
-      // this option instructs the method to create a document if no documents match the filter
-      const options = { upsert: true };
-      // create a document that sets the plot of the movie
-      const updateDoc = {
-        $set: {
-          quantity: newQty
-        },
-      };
-      const result = await items.updateOne(filter, updateDoc, options);
 
+      if (productId && newQty) {
+        const filter = { _id: ObjectId(productId) };
+        // this option instructs the method to create a document if no documents match the filter
+        const options = { upsert: true };
+        // create a document that sets the plot of the movie
+        const updateDoc = {
+          $set: {
+            quantity: newQty,
+          },
+        };
+        const result = await items.updateOne(filter, updateDoc, options);
 
-      res.send(result);
-     }
+        res.send(result);
+      }
     });
 
     //delete an item
-    app.delete('/delete',async(req,res)=>{
+    app.delete("/delete", async (req, res) => {
       const productId = req.body.id;
-      if (productId){
+      if (productId) {
         const query = { _id: ObjectId(productId) };
         const result = await items.deleteOne(query);
-        res.send(result)
+        res.send(result);
       }
-    })
+    });
 
+    //gen token for jwt
+    app.post("/login", (req, res) => {
+      const email = req.body;
+      console.log(email);
+      var token = jwt.sign(email, process.env.TOKEN_SECRET);
+      res.send({ token });
+    });
   } finally {
   }
 }
