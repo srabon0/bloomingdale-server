@@ -10,6 +10,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function validateJWT(req, res, next) {
+  const authorization = req.headers.authorization;
+  console.log("inside auth header", authorization);
+  if (!authorization) {
+    return res.status(401).send({ message: "Unauhtorized access" });
+  }
+  const authToken = authorization.split(" ")[1];
+  jwt.verify(authToken, process.env.TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+    console.log("decoded", decoded);
+    req.decoded = decoded;
+    next();
+  });
+}
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.qljfq.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
@@ -67,23 +84,17 @@ async function run() {
       res.send(product);
     });
 
-    app.get("/myitems", async (req, res) => {
-      try {
-        const user = req.query.email;
-        const authorization = req.headers.authorization;
+    app.get("/myitems", validateJWT, async (req, res) => {
+      const decodedAuthEmail = req.decoded.email;
+      const user = req.query.email;
+      if (decodedAuthEmail === user) {
         const query = { mail: user };
-        const [bearer, token] = authorization.split(" ");
-        var decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-        console.log("verifited", decoded)
-       
-        if (user === decoded.email) {
-          const cursor = items.find(query);
-          // since this method returns the matched document, not a cursor, print it directly
-          const products = await cursor.toArray();
-          res.send(products);
-        }
-      } catch (error) {
-        res.status(401).send("Unauthorized Access");
+        const cursor = items.find(query);
+        // since this method returns the matched document, not a cursor, print it directly
+        const products = await cursor.toArray();
+        res.send(products);
+      } else {
+        res.status(403).send({ message: "Forbidden access" });
       }
     });
 
