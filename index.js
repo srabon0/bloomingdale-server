@@ -38,6 +38,7 @@ async function run() {
     await client.connect();
     const database = client.db("broomingDaleInventory");
     const items = database.collection("items");
+    const feedbacks = database.collection("feedbacks");
 
     // insert an item
     app.post("/addproduct", async (req, res) => {
@@ -136,6 +137,35 @@ async function run() {
       var token = jwt.sign(email, process.env.TOKEN_SECRET);
       res.send({ token });
     });
+
+    //get Feedback
+    app.get('/feedback',async(req,res)=>{
+      const query = {};
+
+      const cursor = feedbacks.find(query);
+      // since this method returns the matched document, not a cursor, print it directly
+      const messge = await cursor.toArray();
+      res.send(messge);
+
+    })
+
+
+    //feedback message
+    app.post("/feedback",async (req,res)=>{
+      const name = req.body.name
+      const email = req.body.email
+      const message = req.body.message
+      if(name && email && message){
+        const doc = {
+          name: name,
+          email:email,
+          message:message
+        }
+        const result = await feedbacks.insertOne(doc);
+        res.send(result);
+      };
+
+    })
   } finally {
   }
 }
